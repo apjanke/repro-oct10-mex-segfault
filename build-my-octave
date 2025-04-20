@@ -1,0 +1,42 @@
+#!/bin/bash
+#
+# apjanke's little Octave 10.1 build script for Linux, 2025-04, for siko's segfault repro
+#
+# To use this, symlink it in to your build directory, with the source dir under it (like,
+# put the source tarball in the same directory and untar it), and run it from there.
+
+# Configuration
+
+VER=10.1.0
+PREFIX=/opt/octave/$VER
+DO_DEBUG=0
+
+# Implementation
+
+set -o nounset
+set -o errexit
+set -o pipefail
+
+BUILD_DIR="build-${VER}-dbg_${DO_DEBUG}"
+DEBUG_CONFIGURE_FLAGS=''
+if [[ $DO_DEBUG == 1 ]]; then
+  DEBUG_CONFIGURE_FLAGS='FFLAGS=-g CFLAGS=-g CXXFLAGS=-g --enable-address-sanitizer-flags'
+  PREFIX="/opt/octave/${VER}-debug"
+fi
+
+JOBS=$(parallel --number-of-threads)
+
+build_descr="Octave ${VER}, debug=${DO_DEBUG}, prefix=${PREFIX} (${JOBS} jobs)"
+echo >&2 "Building ${build_descr}"
+
+rm -rf "$BUILD_DIR"
+mkdir "$BUILD_DIR"
+cd "$BUILD_DIR"
+
+../"octave-${VER}"/configure --prefix="$PREFIX" \
+  --enable-shared --disable-static \
+  $DEBUG_CONFIGURE_FLAGS
+  
+make -j "$JOBS"
+
+echo >&2 "Built ${build_descr}"
